@@ -50,7 +50,6 @@ class VSIPluginFilesystemHandler : public VSIFilesystemHandler
 
 private:
     const char*         m_Prefix;
-    bool m_Buffered;
     const VSIFilesystemPluginCallbacksStruct* m_cb;
 
 protected:
@@ -72,8 +71,7 @@ protected:
 
 public:
     VSIPluginFilesystemHandler( const char *pszPrefix,
-                                const VSIFilesystemPluginCallbacksStruct *cb,
-                                bool bBuffered = FALSE);
+                                const VSIFilesystemPluginCallbacksStruct *cb);
     ~VSIPluginFilesystemHandler() override;
 
     VSIVirtualHandle *Open( const char *pszFilename,

@@ -104,10 +104,8 @@ int VSIPluginHandle::Truncate( vsi_l_offset nNewSize ) {
 
 
 VSIPluginFilesystemHandler::VSIPluginFilesystemHandler( const char *pszPrefix,
-                                const VSIFilesystemPluginCallbacksStruct *cbIn,
-                                bool bBuffered):
+                                const VSIFilesystemPluginCallbacksStruct *cbIn):
     m_Prefix(pszPrefix),
-    m_Buffered(bBuffered),
     m_cb(nullptr)
 {
     m_cb = new VSIFilesystemPluginCallbacksStruct(*cbIn);
@@ -133,7 +131,7 @@ VSIVirtualHandle* VSIPluginFilesystemHandler::Open( const char *pszFilename,
         }
         return nullptr;
     }
-    if ( !m_Buffered ) {
+    if ( !m_cb->bBuffered ) {
         return new VSIPluginHandle(this, cbData);
     } else {
         return VSICreateBufferedReaderHandle(new VSIPluginHandle(this, cbData));
