@@ -51,7 +51,8 @@ CXXFLAGS="-std=c++17 -O1 $ARCH_FLAGS" CFLAGS="-O1 $ARCH_FLAGS" ./configure --pre
     --with-kea=/usr/bin/kea-config \
     --with-tiledb \
     --with-crypto \
-    --with-ecw=/opt/libecwj2-3.3
+    --with-ecw=/opt/libecwj2-3.3 \
+    --with-jxl
 
 make "-j$(nproc)" USER_DEFS=-Werror
 (cd apps; make test_ogrsf  USER_DEFS=-Werror)

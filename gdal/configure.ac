@@ -5968,6 +5968,41 @@ fi
 AC_SUBST(HEIF_CFLAGS,$HEIF_CFLAGS)
 
 dnl ---------------------------------------------------------------------------
+dnl Detect libjxl
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_WITH(heif,[  --with-jxl            Include JPEG-XL support via libjxl library],,)
+
+HAVE_JXL=no
+
+if test "$with_jxl" = "no" ; then
+
+  AC_MSG_NOTICE([JXL support disabled.])
+
+else
+
+  PKG_PROG_PKG_CONFIG([0.21])
+  PKG_CHECK_MODULES([JXL], [libjxl], [], [HAVE_JXL=no])
+  PKG_CHECK_MODULES([JXL_THREADS], [libjxl_threads], [], [HAVE_JXL=no])
+
+  if test -n "$JXL_LIBS" -a -n "$JXL_THREADS_LIBS"; then
+
+    # Test that the package found is for the right architecture
+    saved_LIBS="$LIBS"
+    LIBS="$JXL_LIBS"
+    AC_CHECK_LIB(jxl,JxlDecoderCreate, [HAVE_JXL=yes], [HAVE_JXL=no])
+    LIBS="$saved_LIBS"
+
+    if test "$HAVE_JXL" = "yes"; then
+        LIBS="$JXL_LIBS $JXL_THREADS_LIBS $LIBS"
+    fi
+  fi
+fi
+
+AC_SUBST(HAVE_JXL,$HAVE_JXL)
+AC_SUBST(JXL_CFLAGS,$JXL_CFLAGS)
+
+dnl ---------------------------------------------------------------------------
 dnl Test if sprintf can be overloaded with _XOPEN_SOURCE being defined or other,
 dnl includes being included before, which mingw64 4.8 doesn't like (#6390)
 dnl ---------------------------------------------------------------------------
@@ -6053,6 +6088,7 @@ LOC_MSG([  JPEG-Lossless/CharLS:      ${HAVE_CHARLS}])
 LOC_MSG([  OGDI support:              ${HAVE_OGDI}])
 LOC_MSG([  HDF4 support:              ${HAVE_HDF4}])
 LOC_MSG([  HDF5 support:              ${HAVE_HDF5}])
+LOC_MSG([  JXL support:               ${HAVE_JXL}])
 LOC_MSG([  Kea support:               ${HAVE_KEA}])
 LOC_MSG([  NetCDF support:            ${NETCDF_SETTING}])
 if test "$NETCDF_SETTING" = "yes" ; then

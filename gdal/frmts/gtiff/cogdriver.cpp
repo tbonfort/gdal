@@ -972,6 +972,19 @@ GDALDataset* GDALCOGCreator::Create(const char * pszFilename,
         aosOptions.SetNameValue("MAX_Z_ERROR",
                                 CSLFetchNameValue(papszOptions, "MAX_Z_ERROR"));
     }
+
+    if( STARTS_WITH_CI(osCompress, "JXL") )
+    {
+        aosOptions.SetNameValue("JXL_LOSSLESS",
+                                CSLFetchNameValue(papszOptions, "JXL_LOSSLESS"));
+        aosOptions.SetNameValue("JXL_EFFORT",
+                                CSLFetchNameValue(papszOptions, "JXL_EFFORT"));
+        aosOptions.SetNameValue("JXL_DISTANCE",
+                                CSLFetchNameValue(papszOptions, "JXL_DISTANCE"));
+        aosOptions.SetNameValue("JXL_NUM_THREADS",
+                                CSLFetchNameValue(papszOptions, "JXL_NUM_THREADS"));
+    }
+
     aosOptions.SetNameValue("BIGTIFF",
                                 CSLFetchNameValue(papszOptions, "BIGTIFF"));
     aosOptions.SetNameValue("NUM_THREADS",
@@ -1128,6 +1141,13 @@ void GDALCOGDriver::InitializeCreationOptionList()
 #ifdef HAVE_LERC
     osOptions += ""
 "   <Option name='MAX_Z_ERROR' type='float' description='Maximum error for LERC compression' default='0'/>";
+#endif
+#ifdef HAVE_JXL
+    osOptions += ""
+"   <Option name='JXL_LOSSLESS' type='boolean' description='Whether JPEGXL compression should be lossless' default='YES'/>"
+"   <Option name='JXL_EFFORT' type='int' description='Level of effort 3(fast)-9(slow)' default='7'/>"
+"   <Option name='JXL_DISTANCE' type='float' description='Distance level for lossy compression (0=mathematically lossless, 1.0=visually lossless, usual range [0.5,3])' default='1.0' min='0.1' max='15.0'/>"
+"   <Option name='JXL_NUM_THREADS' type='string' description='Number of worker threads for JXL compression. Can be set to ALL_CPUS' default='1'/>";
 #endif
     osOptions +=
 "   <Option name='NUM_THREADS' type='string' "

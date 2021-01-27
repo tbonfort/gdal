@@ -30,6 +30,11 @@ endif
 
 endif
 
+ifeq ($(HAVE_JXL),yes)
+OBJ := $(OBJ) tif_jxl.o
+TIFF_OPTS	:=	-DHAVE_JXL $(JXL_CFLAGS) $(TIFF_OPTS)
+endif
+
 ifeq ($(LIBDEFLATE_SETTING),yes)
 TIFF_OPTS 	:=	$(TIFF_OPTS) -DLIBDEFLATE_SUPPORT
 endif

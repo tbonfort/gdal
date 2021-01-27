@@ -101,6 +101,7 @@
 #ifdef INTERNAL_LIBTIFF
 #  include "tif_lerc.h"
 #endif
+#include "tif_jxl.h"
 #include "tiffvers.h"
 #include "tifvsi.h"
 #include "xtiffio.h"
@@ -321,6 +322,12 @@ private:
 #if HAVE_LERC
     double      m_dfMaxZError = 0.0;
     uint32      m_anLercAddCompressionAndVersion[2]{0,0};
+#endif
+#if HAVE_JXL
+    bool        m_bJXLLossless = true;
+    float       m_fJXLDistance = 1.0f;
+    uint32_t    m_nJXLEffort = 7;
+    uint32_t    m_nJXLThreads = 0;
 #endif
     double      m_dfNoDataValue = -9999.0;
 
@@ -9260,6 +9267,7 @@ bool GTiffDataset::SubmitCompressionJob( int nStripOrTile, GByte* pabyData,
             m_nCompression == COMPRESSION_LZMA ||
             m_nCompression == COMPRESSION_ZSTD ||
             m_nCompression == COMPRESSION_LERC ||
+            m_nCompression == COMPRESSION_JXL ||
             m_nCompression == COMPRESSION_WEBP ||
             m_nCompression == COMPRESSION_JPEG) )
     {
@@ -10111,6 +10119,12 @@ CPLErr GTiffDataset::RegisterNewOverviewDataset(toff_t nOverviewOffset,
     poODS->m_dfMaxZError = m_dfMaxZError;
     memcpy(poODS->m_anLercAddCompressionAndVersion, m_anLercAddCompressionAndVersion,
            sizeof(m_anLercAddCompressionAndVersion));
+#endif
+#ifdef HAVE_JXL
+    poODS->m_bJXLLossless = m_bJXLLossless;
+    poODS->m_fJXLDistance = m_fJXLDistance;
+    poODS->m_nJXLEffort = m_nJXLEffort;
+    poODS->m_nJXLThreads = m_nJXLThreads;
 #endif
 
     if( poODS->OpenOffset( VSI_TIFFOpenChild(m_hTIFF), nOverviewOffset,
@@ -12147,6 +12161,13 @@ void GTiffDataset::RestoreVolatileParameters(TIFF* hTIFF)
         GTiffSetDeflateSubCodec(hTIFF);
     }
 
+#ifdef HAVE_JXL
+    if( m_nCompression == COMPRESSION_JXL )
+    {
+        TIFFSetField(hTIFF, TIFFTAG_JXL_WORKER_THREADS, m_nJXLThreads);
+    }
+#endif
+
 /* -------------------------------------------------------------------- */
 /*      Propagate any quality settings.                                 */
 /* -------------------------------------------------------------------- */
@@ -12181,6 +12202,14 @@ void GTiffDataset::RestoreVolatileParameters(TIFF* hTIFF)
             TIFFSetField(hTIFF, TIFFTAG_WEBP_LEVEL, m_nWebPLevel);
         if( m_bWebPLossless && m_nCompression == COMPRESSION_WEBP)
             TIFFSetField(hTIFF, TIFFTAG_WEBP_LOSSLESS, 1);
+#ifdef HAVE_JXL
+        if( m_nCompression == COMPRESSION_JXL )
+        {
+            TIFFSetField(hTIFF, TIFFTAG_JXL_LOSSYNESS, m_bJXLLossless ? JXL_LOSSLESS : JXL_LOSSY);
+            TIFFSetField(hTIFF, TIFFTAG_JXL_EFFORT, m_nJXLEffort);
+            TIFFSetField(hTIFF, TIFFTAG_JXL_DISTANCE, m_fJXLDistance);
+        }
+#endif
     }
 }
 
@@ -12510,6 +12539,19 @@ bool GTiffDataset::AssociateExternalMask()
     return true;
 }
 
+#ifdef HAVE_JXL
+
+/************************************************************************/
+/*                        GTiffGetJXLThreads()                          */
+/************************************************************************/
+
+static uint32_t GTiffGetJXLThreads(CSLConstList papszOptions)
+{
+    const char* pszThreads = CSLFetchNameValueDef(papszOptions, "JXL_NUM_THREADS", "1");
+    return EQUAL(pszThreads, "ALL_CPUS") ? CPLGetNumCPUs() : atoi(pszThreads);
+}
+#endif
+
 /************************************************************************/
 /*                                Open()                                */
 /************************************************************************/
@@ -12701,6 +12743,10 @@ GDALDataset *GTiffDataset::Open( GDALOpenInfo * poOpenInfo )
     {
         poDS->InitCreationOrOpenOptions(poOpenInfo->papszOpenOptions);
     }
+
+#ifdef HAVE_JXL
+    poDS->m_nJXLThreads = GTiffGetJXLThreads(poOpenInfo->papszOpenOptions);
+#endif
 
     poDS->m_bLoadPam = true;
     poDS->m_bColorProfileMetadataChanged = false;
@@ -14429,6 +14475,10 @@ CPLErr GTiffDataset::OpenOffset( TIFF *hTIFFIn,
     {
         m_oGTiffMDMD.SetMetadataItem( "COMPRESSION", "WEBP", "IMAGE_STRUCTURE" );
     }
+    else if( m_nCompression == COMPRESSION_JXL )
+    {
+        m_oGTiffMDMD.SetMetadataItem( "COMPRESSION", "JXL", "IMAGE_STRUCTURE" );
+    }
     else
     {
         CPLString oComp;
@@ -15412,6 +15462,24 @@ static double GTiffGetLERCMaxZError(char** papszOptions)
 }
 #endif
 
+#if HAVE_JXL
+static bool GTiffGetJXLLossless(CSLConstList papszOptions)
+{
+    return CPLTestBool(CSLFetchNameValueDef(papszOptions, "JXL_LOSSLESS", "TRUE"));
+}
+
+static uint32_t GTiffGetJXLEffort(CSLConstList papszOptions)
+{
+    return atoi(CSLFetchNameValueDef(papszOptions, "JXL_EFFORT", "7"));
+}
+
+static float GTiffGetJXLDistance(CSLConstList papszOptions)
+{
+    return static_cast<float>(CPLAtof(CSLFetchNameValueDef(papszOptions, "JXL_DISTANCE", "1.0")));
+}
+
+#endif
+
 static signed char GTiffGetWebPLevel(char** papszOptions)
 {
     int nWebPLevel = -1;
@@ -15693,7 +15761,12 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
 #if HAVE_LERC
     const double l_dfMaxZError = GTiffGetLERCMaxZError(papszParmList);
 #endif
-
+#if HAVE_JXL
+    const bool l_bJXLLossless = GTiffGetJXLLossless(papszParmList);
+    const uint32_t l_nJXLEffort = GTiffGetJXLEffort(papszParmList);
+    const float l_fJXLDistance = GTiffGetJXLDistance(papszParmList);
+    const uint32_t l_nJXLThreads = GTiffGetJXLThreads(papszParmList);
+#endif
 /* -------------------------------------------------------------------- */
 /*      Streaming related code                                          */
 /* -------------------------------------------------------------------- */
@@ -16253,6 +16326,15 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
     if( l_nCompression == COMPRESSION_LERC )
     {
         TIFFSetField( l_hTIFF, TIFFTAG_LERC_MAXZERROR, l_dfMaxZError );
+    }
+#endif
+#if HAVE_JXL
+    if( l_nCompression == COMPRESSION_JXL )
+    {
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_LOSSYNESS, l_bJXLLossless ? JXL_LOSSLESS : JXL_LOSSY );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_EFFORT, l_nJXLEffort );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_DISTANCE, l_fJXLDistance );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_WORKER_THREADS, l_nJXLThreads );
     }
 #endif
     if( l_nCompression == COMPRESSION_WEBP && l_nWebPLevel != -1)
@@ -16890,6 +16972,12 @@ GDALDataset *GTiffDataset::Create( const char * pszFilename,
     poDS->m_nJpegTablesMode = GTiffGetJpegTablesMode(papszParmList);
 #if HAVE_LERC
     poDS->m_dfMaxZError = GTiffGetLERCMaxZError(papszParmList);
+#endif
+#if HAVE_JXL
+    poDS->m_bJXLLossless = GTiffGetJXLLossless(papszParmList);
+    poDS->m_nJXLEffort = GTiffGetJXLEffort(papszParmList);
+    poDS->m_fJXLDistance = GTiffGetJXLDistance(papszParmList);
+    poDS->m_nJXLThreads = GTiffGetJXLThreads(papszParmList);
 #endif
     poDS->InitCreationOrOpenOptions(papszParmList);
 
@@ -18127,6 +18215,12 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
 #if HAVE_LERC
     poDS->m_dfMaxZError = GTiffGetLERCMaxZError(papszOptions);
 #endif
+#if HAVE_JXL
+    poDS->m_bJXLLossless = GTiffGetJXLLossless(papszOptions);
+    poDS->m_nJXLEffort = GTiffGetJXLEffort(papszOptions);
+    poDS->m_fJXLDistance = GTiffGetJXLDistance(papszOptions);
+    poDS->m_nJXLThreads = GTiffGetJXLThreads(papszOptions);
+#endif
     poDS->InitCreationOrOpenOptions(papszOptions);
 
     if( l_nCompression == COMPRESSION_ADOBE_DEFLATE ||
@@ -18166,6 +18260,15 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
     if( l_nCompression == COMPRESSION_LERC )
     {
         TIFFSetField( l_hTIFF, TIFFTAG_LERC_MAXZERROR, poDS->m_dfMaxZError );
+    }
+#endif
+#if HAVE_JXL
+    if( l_nCompression == COMPRESSION_JXL )
+    {
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_LOSSYNESS, poDS->m_bJXLLossless ? JXL_LOSSLESS : JXL_LOSSY );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_EFFORT, poDS->m_nJXLEffort );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_DISTANCE, poDS->m_fJXLDistance );
+        TIFFSetField( l_hTIFF, TIFFTAG_JXL_WORKER_THREADS, poDS->m_nJXLThreads );
     }
 #endif
     if( l_nCompression == COMPRESSION_WEBP )
@@ -19805,6 +19908,9 @@ static std::mutex oDeleteMutex;
 #ifdef HAVE_LERC
 static TIFFCodec* pLercCodec = nullptr;
 #endif
+#ifdef HAVE_JXL
+static TIFFCodec* pJXLCodec = nullptr;
+#endif
 
 int GTiffOneTimeInit()
 
@@ -19815,6 +19921,13 @@ int GTiffOneTimeInit()
     if( pLercCodec == nullptr )
     {
         pLercCodec = TIFFRegisterCODEC(COMPRESSION_LERC, "LERC", TIFFInitLERC);
+    }
+#endif
+
+#ifdef HAVE_JXL
+    if( pJXLCodec == nullptr )
+    {
+        pJXLCodec = TIFFRegisterCODEC(COMPRESSION_JXL, "JXL", TIFFInitJXL);
     }
 #endif
 
@@ -19879,6 +19992,11 @@ void GDALDeregister_GTiff( GDALDriver * )
         TIFFUnRegisterCODEC(pLercCodec);
     pLercCodec = nullptr;
 #endif
+#ifdef HAVE_JXL
+    if( pJXLCodec )
+        TIFFUnRegisterCODEC(pJXLCodec);
+    pJXLCodec = nullptr;
+#endif
 }
 
 /************************************************************************/
@@ -19916,6 +20034,12 @@ int GTIFFGetCompressionMethod(const char* pszValue, const char* pszVariableName)
              EQUAL( pszValue, "LERC_ZSTD" ) )
     {
         nCompression = COMPRESSION_LERC;
+    }
+#endif
+#ifdef HAVE_JXL
+    else if( EQUAL( pszValue, "JXL" ) )
+    {
+        nCompression = COMPRESSION_JXL;
     }
 #endif
     else if( EQUAL( pszValue, "WEBP" ) )
@@ -20029,6 +20153,9 @@ CPLString GTiffGetCompressValues(bool& bHasLZW,
                     "       <Value>LERC_ZSTD</Value>";
     }
 #endif
+#ifdef HAVE_JXL
+    osCompressValues += "       <Value>JXL</Value>";
+#endif
     _TIFFfree( codecs );
 
     return osCompressValues;
@@ -20108,6 +20235,13 @@ void GDALRegister_GTiff()
 #endif
 "   <Option name='WEBP_LEVEL' type='int' description='WEBP quality level. Low values result in higher compression ratios' default='75'/>";
     }
+#ifdef HAVE_JXL
+    osOptions += ""
+"   <Option name='JXL_LOSSLESS' type='boolean' description='Whether JPEGXL compression should be lossless' default='YES'/>"
+"   <Option name='JXL_EFFORT' type='int' description='Level of effort 3(fast)-9(slow)' default='7'/>"
+"   <Option name='JXL_DISTANCE' type='float' description='Distance level for lossy compression (0=mathematically lossless, 1.0=visually lossless, usual range [0.5,3])' default='1.0' min='0.1' max='15.0'/>"
+"   <Option name='JXL_NUM_THREADS' type='string' description='Number of worker threads for JXL compression. Can be set to ALL_CPUS' default='1'/>";
+#endif
     osOptions += ""
 "   <Option name='NUM_THREADS' type='string' description='Number of worker threads for compression. Can be set to ALL_CPUS' default='1'/>"
 "   <Option name='NBITS' type='int' description='BITS for sub-byte files (1-7), sub-uint16 (9-15), sub-uint32 (17-31), or float32 (16)'/>"
@@ -20203,6 +20337,9 @@ void GDALRegister_GTiff()
     poDriver->SetMetadataItem( GDAL_DMD_OPENOPTIONLIST,
 "<OpenOptionList>"
 "   <Option name='NUM_THREADS' type='string' description='Number of worker threads for compression. Can be set to ALL_CPUS' default='1'/>"
+#ifdef HAVE_JXL
+"   <Option name='JXL_NUM_THREADS' type='string' description='Number of worker threads for JXL decompression/compression. Can be set to ALL_CPUS' default='1'/>"
+#endif
 "   <Option name='GEOTIFF_KEYS_FLAVOR' type='string-select' default='STANDARD' description='Which flavor of GeoTIFF keys must be used (for writing)'>"
 "       <Value>STANDARD</Value>"
 "       <Value>ESRI_PE</Value>"

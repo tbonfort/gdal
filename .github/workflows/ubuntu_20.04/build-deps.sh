@@ -23,7 +23,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing --no-install-rec
     libopenexr-dev libheif-dev \
     libdeflate-dev \
     mono-mcs libmono-system-drawing4.0-cil ccache \
-    perl ant
+    perl ant \
+    libbrotli-dev
 
 # Build likbkea
 KEA_VERSION=1.4.13
@@ -55,3 +56,15 @@ mkdir tiledb \
 
 # Workaround bug in ogdi packaging
 ln -s /usr/lib/ogdi/libvrf.so /usr/lib
+
+# Build libjxl
+
+git clone https://gitlab.com/wg1/jpeg-xl.git --recursive \
+    && cd jpeg-xl \
+    && mkdir build \
+    && cd build \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF .. \
+    && make -j$(nproc) \
+    && make -j$(nproc) install \
+    && cd ../.. \
+    && rm -rf jpeg-xl

@@ -631,6 +631,11 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+HAVE_JXL
+JXL_THREADS_LIBS
+JXL_THREADS_CFLAGS
+JXL_LIBS
+JXL_CFLAGS
 HEIF_LIBS
 HEIF_CFLAGS
 EXR_LIBS
@@ -1270,7 +1275,11 @@ POPPLER_LIBS
 EXR_CFLAGS
 EXR_LIBS
 HEIF_CFLAGS
-HEIF_LIBS'
+HEIF_LIBS
+JXL_CFLAGS
+JXL_LIBS
+JXL_THREADS_CFLAGS
+JXL_THREADS_LIBS'
 
 
 # Initialize some variables set by options.
@@ -2262,6 +2271,7 @@ Optional Packages:
                           purposes
   --with-exr            Include EXR support via OpenEXR library
   --with-heif            Include HEIF support via libheif library
+  --with-jxl            Include JPEG-XL support via libjxl library
 
 Some influential environment variables:
   CC          C compiler command
@@ -2309,6 +2319,12 @@ Some influential environment variables:
   EXR_LIBS    linker flags for EXR, overriding pkg-config
   HEIF_CFLAGS C compiler flags for HEIF, overriding pkg-config
   HEIF_LIBS   linker flags for HEIF, overriding pkg-config
+  JXL_CFLAGS  C compiler flags for JXL, overriding pkg-config
+  JXL_LIBS    linker flags for JXL, overriding pkg-config
+  JXL_THREADS_CFLAGS
+              C compiler flags for JXL_THREADS, overriding pkg-config
+  JXL_THREADS_LIBS
+              linker flags for JXL_THREADS, overriding pkg-config
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -42715,6 +42731,342 @@ HEIF_CFLAGS=$HEIF_CFLAGS
 
 
 
+
+# Check whether --with-heif was given.
+if test "${with_heif+set}" = set; then :
+  withval=$with_heif;
+fi
+
+
+HAVE_JXL=no
+
+if test "$with_jxl" = "no" ; then
+
+  { $as_echo "$as_me:${as_lineno-$LINENO}: JXL support disabled." >&5
+$as_echo "$as_me: JXL support disabled." >&6;}
+
+else
+
+
+
+if test "x$ac_cv_env_PKG_CONFIG_set" != "xset"; then
+	if test -n "$ac_tool_prefix"; then
+  # Extract the first word of "${ac_tool_prefix}pkg-config", so it can be a program name with args.
+set dummy ${ac_tool_prefix}pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_PKG_CONFIG="$PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+PKG_CONFIG=$ac_cv_path_PKG_CONFIG
+if test -n "$PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $PKG_CONFIG" >&5
+$as_echo "$PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+fi
+if test -z "$ac_cv_path_PKG_CONFIG"; then
+  ac_pt_PKG_CONFIG=$PKG_CONFIG
+  # Extract the first word of "pkg-config", so it can be a program name with args.
+set dummy pkg-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path_ac_pt_PKG_CONFIG+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $ac_pt_PKG_CONFIG in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path_ac_pt_PKG_CONFIG="$ac_pt_PKG_CONFIG" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path_ac_pt_PKG_CONFIG="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+ac_pt_PKG_CONFIG=$ac_cv_path_ac_pt_PKG_CONFIG
+if test -n "$ac_pt_PKG_CONFIG"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PKG_CONFIG" >&5
+$as_echo "$ac_pt_PKG_CONFIG" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+  if test "x$ac_pt_PKG_CONFIG" = x; then
+    PKG_CONFIG=""
+  else
+    case $cross_compiling:$ac_tool_warned in
+yes:)
+{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: using cross tools not prefixed with host triplet" >&5
+$as_echo "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ac_tool_warned=yes ;;
+esac
+    PKG_CONFIG=$ac_pt_PKG_CONFIG
+  fi
+else
+  PKG_CONFIG="$ac_cv_path_PKG_CONFIG"
+fi
+
+fi
+if test -n "$PKG_CONFIG"; then
+	_pkg_min_version=0.21
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking pkg-config is at least version $_pkg_min_version" >&5
+$as_echo_n "checking pkg-config is at least version $_pkg_min_version... " >&6; }
+	if $PKG_CONFIG --atleast-pkgconfig-version $_pkg_min_version; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	else
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		PKG_CONFIG=""
+	fi
+
+fi
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for JXL" >&5
+$as_echo_n "checking for JXL... " >&6; }
+
+if test -n "$PKG_CONFIG"; then
+    if test -n "$JXL_CFLAGS"; then
+        pkg_cv_JXL_CFLAGS="$JXL_CFLAGS"
+    else
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libjxl\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libjxl") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_JXL_CFLAGS=`$PKG_CONFIG --cflags "libjxl" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+    fi
+else
+	pkg_failed=untried
+fi
+if test -n "$PKG_CONFIG"; then
+    if test -n "$JXL_LIBS"; then
+        pkg_cv_JXL_LIBS="$JXL_LIBS"
+    else
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libjxl\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libjxl") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_JXL_LIBS=`$PKG_CONFIG --libs "libjxl" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+    fi
+else
+	pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        JXL_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "libjxl"`
+        else
+	        JXL_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "libjxl"`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$JXL_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                HAVE_JXL=no
+elif test $pkg_failed = untried; then
+	HAVE_JXL=no
+else
+	JXL_CFLAGS=$pkg_cv_JXL_CFLAGS
+	JXL_LIBS=$pkg_cv_JXL_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	:
+fi
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for JXL_THREADS" >&5
+$as_echo_n "checking for JXL_THREADS... " >&6; }
+
+if test -n "$PKG_CONFIG"; then
+    if test -n "$JXL_THREADS_CFLAGS"; then
+        pkg_cv_JXL_THREADS_CFLAGS="$JXL_THREADS_CFLAGS"
+    else
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libjxl_threads\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libjxl_threads") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_JXL_THREADS_CFLAGS=`$PKG_CONFIG --cflags "libjxl_threads" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+    fi
+else
+	pkg_failed=untried
+fi
+if test -n "$PKG_CONFIG"; then
+    if test -n "$JXL_THREADS_LIBS"; then
+        pkg_cv_JXL_THREADS_LIBS="$JXL_THREADS_LIBS"
+    else
+        if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"libjxl_threads\""; } >&5
+  ($PKG_CONFIG --exists --print-errors "libjxl_threads") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_JXL_THREADS_LIBS=`$PKG_CONFIG --libs "libjxl_threads" 2>/dev/null`
+else
+  pkg_failed=yes
+fi
+    fi
+else
+	pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        JXL_THREADS_PKG_ERRORS=`$PKG_CONFIG --short-errors --errors-to-stdout --print-errors "libjxl_threads"`
+        else
+	        JXL_THREADS_PKG_ERRORS=`$PKG_CONFIG --errors-to-stdout --print-errors "libjxl_threads"`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$JXL_THREADS_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+                HAVE_JXL=no
+elif test $pkg_failed = untried; then
+	HAVE_JXL=no
+else
+	JXL_THREADS_CFLAGS=$pkg_cv_JXL_THREADS_CFLAGS
+	JXL_THREADS_LIBS=$pkg_cv_JXL_THREADS_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+	:
+fi
+
+  if test -n "$JXL_LIBS" -a -n "$JXL_THREADS_LIBS"; then
+
+    # Test that the package found is for the right architecture
+    saved_LIBS="$LIBS"
+    LIBS="$JXL_LIBS"
+    { $as_echo "$as_me:${as_lineno-$LINENO}: checking for JxlDecoderCreate in -ljxl" >&5
+$as_echo_n "checking for JxlDecoderCreate in -ljxl... " >&6; }
+if ${ac_cv_lib_jxl_JxlDecoderCreate+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ljxl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char JxlDecoderCreate ();
+int
+main ()
+{
+return JxlDecoderCreate ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_jxl_JxlDecoderCreate=yes
+else
+  ac_cv_lib_jxl_JxlDecoderCreate=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_jxl_JxlDecoderCreate" >&5
+$as_echo "$ac_cv_lib_jxl_JxlDecoderCreate" >&6; }
+if test "x$ac_cv_lib_jxl_JxlDecoderCreate" = xyes; then :
+  HAVE_JXL=yes
+else
+  HAVE_JXL=no
+fi
+
+    LIBS="$saved_LIBS"
+
+    if test "$HAVE_JXL" = "yes"; then
+        LIBS="$JXL_LIBS $JXL_THREADS_LIBS $LIBS"
+    fi
+  fi
+fi
+
+HAVE_JXL=$HAVE_JXL
+
+JXL_CFLAGS=$JXL_CFLAGS
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if sprintf can be overloaded for GDAL compilation" >&5
 $as_echo_n "checking if sprintf can be overloaded for GDAL compilation... " >&6; }
 echo '#define _XOPEN_SOURCE' > testdeprecated.cpp
@@ -45164,6 +45516,9 @@ echo "  HDF4 support:              ${HAVE_HDF4}"
 
 
 echo "  HDF5 support:              ${HAVE_HDF5}"
+
+
+echo "  JXL support:               ${HAVE_JXL}"
 
 
 echo "  Kea support:               ${HAVE_KEA}"
