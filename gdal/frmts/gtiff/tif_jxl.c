@@ -340,13 +340,13 @@ JXLPreDecode(TIFF* tif, uint16_t s)
             return 0;
         }
 
-        const size_t nRemaining = JxlDecoderReleaseInput(sp->decoder);
-        if( nRemaining != 0 )
+        /*const size_t nRemaining = */ JxlDecoderReleaseInput(sp->decoder);
+        /*if( nRemaining != 0 )
         {
             TIFFErrorExt(tif->tif_clientdata, module,
                          "JxlDecoderReleaseInput(): %u input bytes remaining",
                          (unsigned)nRemaining);
-        }
+        }*/
 
         return 1;
 }
