@@ -5971,7 +5971,7 @@ dnl ---------------------------------------------------------------------------
 dnl Detect libjxl
 dnl ---------------------------------------------------------------------------
 
-AC_ARG_WITH(heif,[  --with-jxl            Include JPEG-XL support via libjxl library],,)
+AC_ARG_WITH(jxl,[  --with-jxl            Include JPEG-XL support via libjxl library],,)
 
 HAVE_JXL=no
 

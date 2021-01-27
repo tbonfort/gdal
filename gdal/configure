@@ -1239,6 +1239,7 @@ with_lerc
 with_null
 with_exr
 with_heif
+with_jxl
 '
       ac_precious_vars='build_alias
 host_alias
@@ -42732,9 +42733,9 @@ HEIF_CFLAGS=$HEIF_CFLAGS
 
 
 
-# Check whether --with-heif was given.
-if test "${with_heif+set}" = set; then :
-  withval=$with_heif;
+# Check whether --with-jxl was given.
+if test "${with_jxl+set}" = set; then :
+  withval=$with_jxl;
 fi
 
 
