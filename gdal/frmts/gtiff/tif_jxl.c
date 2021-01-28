@@ -201,6 +201,8 @@ JXLPreDecode(TIFF* tif, uint16_t s)
 
         (void) s;
         assert(sp != NULL);
+        if( sp->state != LSTATE_INIT_DECODE )
+            tif->tif_setupdecode(tif);
 
         const int jxlDataType = GetJXLDataType(tif);
         if( jxlDataType < 0 )
@@ -414,6 +416,8 @@ JXLPreEncode(TIFF* tif, uint16_t s)
 
         (void) s;
         assert(sp != NULL);
+        if( sp->state != LSTATE_INIT_ENCODE )
+            tif->tif_setupencode(tif);
 
         if( td->td_planarconfig == PLANARCONFIG_CONTIG &&
             td->td_samplesperpixel > 4 )
