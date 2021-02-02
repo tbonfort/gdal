@@ -12547,7 +12547,10 @@ bool GTiffDataset::AssociateExternalMask()
 
 static uint32_t GTiffGetJXLThreads(CSLConstList papszOptions)
 {
-    const char* pszThreads = CSLFetchNameValueDef(papszOptions, "JXL_NUM_THREADS", "1");
+    const char* pszThreads = CSLFetchNameValueDef(papszOptions, "JXL_NUM_THREADS", nullptr);
+    if(pszThreads==nullptr) {
+        return 1;
+    }
     return EQUAL(pszThreads, "ALL_CPUS") ? CPLGetNumCPUs() : atoi(pszThreads);
 }
 #endif
@@ -15470,7 +15473,7 @@ static bool GTiffGetJXLLossless(CSLConstList papszOptions)
 
 static uint32_t GTiffGetJXLEffort(CSLConstList papszOptions)
 {
-    return atoi(CSLFetchNameValueDef(papszOptions, "JXL_EFFORT", "7"));
+    return atoi(CSLFetchNameValueDef(papszOptions, "JXL_EFFORT", "3"));
 }
 
 static float GTiffGetJXLDistance(CSLConstList papszOptions)
