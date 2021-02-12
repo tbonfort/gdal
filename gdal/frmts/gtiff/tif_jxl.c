@@ -513,9 +513,21 @@ JXLPostEncode(TIFF* tif)
             return 0;
         }
 
+        JxlBasicInfo basic_info = {};
+        memset(&basic_info,0,sizeof(basic_info));
+        basic_info.xsize = sp->segment_width;
+        basic_info.ysize = sp->segment_height;
+        basic_info.bits_per_sample = td->td_bitspersample;
+        //basic_info.num_color_channels=td->td_samplesperpixel;
+        if( td->td_planarconfig == PLANARCONFIG_CONTIG && 
+            ( td->td_samplesperpixel==2 || td->td_samplesperpixel==4 )
+        ) {
+            basic_info.alpha_bits = td->td_bitspersample;
+        }
         if( sp->lossless )
         {
             JxlEncoderOptionsSetLossless(opts, TRUE);
+            basic_info.uses_original_profile = JXL_TRUE;
         }
         else
         {
@@ -534,14 +546,26 @@ JXLPostEncode(TIFF* tif)
             JxlEncoderDestroy(enc);
             return 0;
         }
-        if( JxlEncoderSetDimensions(enc, sp->segment_width,
-                                    sp->segment_height) != JXL_ENC_SUCCESS )
+        if (JXL_ENC_SUCCESS != JxlEncoderSetBasicInfo(enc, &basic_info))
         {
             TIFFErrorExt(tif->tif_clientdata, module,
-                         "JxlEncoderSetDimensions() failed");
+                         "JxlEncoderSetBasicInfo() failed");
             JxlEncoderDestroy(enc);
             return 0;
         }
+        /*
+        JxlColorEncoding color_encoding = {};
+        memset(&color_encoding,0,sizeof(color_encoding));
+        JxlColorEncodingSetToSRGB(&color_encoding, TRUE);
+        //color_encoding.color_space=JXL_COLOR_SPACE_UNKNOWN;
+        if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(enc, &color_encoding))
+        {
+            TIFFErrorExt(tif->tif_clientdata, module,
+                         "JxlEncoderSetColorEncoding() failed");
+            JxlEncoderDestroy(enc);
+            return 0;
+        }
+        */
 
         JxlPixelFormat format = {};
         format.num_channels = td->td_planarconfig == PLANARCONFIG_CONTIG ?
