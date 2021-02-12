@@ -534,11 +534,25 @@ JXLPostEncode(TIFF* tif)
             JxlEncoderDestroy(enc);
             return 0;
         }
-        if( JxlEncoderSetDimensions(enc, sp->segment_width,
-                                    sp->segment_height) != JXL_ENC_SUCCESS )
+        JxlBasicInfo basic_info = {};
+        memset(&basic_info,0,sizeof(basic_info));
+        basic_info.xsize = sp->segment_width;
+        basic_info.ysize = sp->segment_height;
+        basic_info.bits_per_sample = 16;
+        basic_info.uses_original_profile = JXL_FALSE;
+        if (JXL_ENC_SUCCESS != JxlEncoderSetBasicInfo(enc, &basic_info))
         {
             TIFFErrorExt(tif->tif_clientdata, module,
-                         "JxlEncoderSetDimensions() failed");
+                         "JxlEncoderSetBasicInfo() failed");
+            JxlEncoderDestroy(enc);
+            return 0;
+        }
+        JxlColorEncoding color_encoding = {};
+        JxlColorEncodingSetToLinearSRGB(&color_encoding, td->td_samplesperpixel!=3);
+        if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(enc, &color_encoding))
+        {
+            TIFFErrorExt(tif->tif_clientdata, module,
+                         "JxlEncoderSetBasicInfo() failed");
             JxlEncoderDestroy(enc);
             return 0;
         }
