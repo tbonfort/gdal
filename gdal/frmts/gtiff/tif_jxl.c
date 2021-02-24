@@ -553,19 +553,21 @@ JXLPostEncode(TIFF* tif)
             JxlEncoderDestroy(enc);
             return 0;
         }
-        /*
-        JxlColorEncoding color_encoding = {};
-        memset(&color_encoding,0,sizeof(color_encoding));
-        JxlColorEncodingSetToSRGB(&color_encoding, TRUE);
-        //color_encoding.color_space=JXL_COLOR_SPACE_UNKNOWN;
-        if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(enc, &color_encoding))
-        {
-            TIFFErrorExt(tif->tif_clientdata, module,
-                         "JxlEncoderSetColorEncoding() failed");
-            JxlEncoderDestroy(enc);
-            return 0;
+        if( td->td_planarconfig == PLANARCONFIG_CONTIG && 
+            ( td->td_samplesperpixel==1 || td->td_samplesperpixel==2 )
+        ) {
+            JxlColorEncoding color_encoding = {};
+            memset(&color_encoding,0,sizeof(color_encoding));
+            JxlColorEncodingSetToSRGB(&color_encoding, TRUE);
+            //color_encoding.color_space=JXL_COLOR_SPACE_UNKNOWN;
+            if (JXL_ENC_SUCCESS != JxlEncoderSetColorEncoding(enc, &color_encoding))
+            {
+                TIFFErrorExt(tif->tif_clientdata, module,
+                            "JxlEncoderSetColorEncoding() failed");
+                JxlEncoderDestroy(enc);
+                return 0;
+            }
         }
-        */
 
         JxlPixelFormat format = {};
         format.num_channels = td->td_planarconfig == PLANARCONFIG_CONTIG ?
