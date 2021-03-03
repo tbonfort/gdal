@@ -1294,11 +1294,7 @@ static bool CheckNumericDataType(GDALExtendedDataTypeHS* dt)
         }
 
         // create the dtype string
-#if PY_VERSION_HEX >= 0x03000000
         PyObject *pDTypeString = PyUnicode_FromFormat("S%d", nMaxLen);
-#else
-        PyObject *pDTypeString = PyString_FromFormat("S%d", nMaxLen);
-#endif
         // out type description object
         PyArray_Descr *pDescr;
         PyArray_DescrConverter(pDTypeString, &pDescr);
@@ -1715,7 +1711,7 @@ def RATWriteArray(rat, array, field, start=0):
         array = array.astype(numpy.double)
     elif numpy.issubdtype(array.dtype, numpy.character):
         # cast away any kind of Unicode etc
-        array = array.astype(numpy.character)
+        array = array.astype(bytes)
     else:
         raise ValueError("Array not of a supported type (integer, double or string)")
 
