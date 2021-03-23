@@ -105,7 +105,7 @@ public:
   static GDALDataset* Create( const char* pszFilename,
                               int nXSize, int nYSize, int nBands,
                               GDALDataType eType,
-                              char** papszParmList );
+                              char** papszParamList );
   static CPLErr Delete( const char * pszFilename );
 
   const OGRSpatialReference* GetSpatialRef() const override;
@@ -1751,9 +1751,9 @@ CPLErr FITSRasterBand::IReadBlock(CPL_UNUSED int nBlockXOff, int nBlockYOff,
   CPLAssert(nBlockYOff < nRasterYSize);
 
   // Calculate offsets and read in the data. Note that FITS array offsets
-  // start at 1...
+  // start at 1 at the bottom left...
   LONGLONG offset = static_cast<LONGLONG>(nBand - 1) * nRasterXSize * nRasterYSize +
-    static_cast<LONGLONG>(nBlockYOff) * nRasterXSize + 1;
+    (static_cast<LONGLONG>(nRasterYSize - 1 - nBlockYOff) * nRasterXSize + 1);
   long nElements = nRasterXSize;
 
   // If we haven't written this block to the file yet, then attempting
@@ -1803,7 +1803,7 @@ CPLErr FITSRasterBand::IWriteBlock( CPL_UNUSED int nBlockXOff, int nBlockYOff,
   // Calculate offsets and read in the data. Note that FITS array offsets
   // start at 1 at the bottom left...
   LONGLONG offset = static_cast<LONGLONG>(nBand - 1) * nRasterXSize * nRasterYSize +
-    static_cast<LONGLONG>(nBlockYOff) * nRasterXSize + 1;
+    (static_cast<LONGLONG>(nRasterYSize - 1 - nBlockYOff) * nRasterXSize + 1);
   long nElements = nRasterXSize;
   fits_write_img(hFITS, dataset->m_fitsDataType, offset, nElements,
                  pImage, &status);
@@ -2658,7 +2658,7 @@ GDALDataset* FITSDataset::Open(GDALOpenInfo* poOpenInfo) {
 GDALDataset *FITSDataset::Create( const char* pszFilename,
                                   int nXSize, int nYSize,
                                   int nBands, GDALDataType eType,
-                                  CPL_UNUSED char** papszParmList )
+                                  CPL_UNUSED char** papszParamList )
 {
   int status = 0;
 

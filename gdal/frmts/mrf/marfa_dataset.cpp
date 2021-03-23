@@ -107,7 +107,7 @@ bool MRFDataset::SetPBuffer(unsigned int sz) {
         return false;
     }
     pbuffer = pbufferNew;
-    pbsize = (pbuffer == nullptr) ? 0 : sz;
+    pbsize = sz;
     return true;
 }
 
@@ -372,7 +372,7 @@ CPLErr MRFDataset::IBuildOverviews(
 
                 //
                 // Ready, generate this overview
-                // Note that this function has a bug in GDAL, the block stepping is incorect
+                // Note that this function has a bug in GDAL, the block stepping is incorrect
                 // It can generate multiple overview in one call,
                 // Could rewrite this loop so this function only gets called once
                 //
@@ -1611,7 +1611,12 @@ template<typename T> static void ZenFilter(T* buffer, GByte* mask, int nPixels, 
             if (bFBO) { // First band only
                 bool f = true;
                 for (int b = 0; b < nBands; b++)
-                    f = f && (0 == buffer[nBands * i + b]);
+                {
+                    if (0 == buffer[nBands * i + b]) {
+                        f = false;
+                        break;
+                    }
+                }
                 if (f)
                     buffer[nBands * i] = 1;
             }

@@ -524,6 +524,9 @@ JXLPostEncode(TIFF* tif)
         ) {
             basic_info.alpha_bits = td->td_bitspersample;
         }
+        if ( td->td_sampleformat == SAMPLEFORMAT_IEEEFP ) {
+            basic_info.exponent_bits_per_sample=8;
+        }
         if( sp->lossless )
         {
             JxlEncoderOptionsSetLossless(opts, TRUE);
@@ -553,9 +556,9 @@ JXLPostEncode(TIFF* tif)
             JxlEncoderDestroy(enc);
             return 0;
         }
-        if( td->td_planarconfig == PLANARCONFIG_CONTIG && 
-            ( td->td_samplesperpixel==1 || td->td_samplesperpixel==2 )
-        ) {
+        if( td->td_samplesperpixel==1 ||
+            ( td->td_planarconfig == PLANARCONFIG_CONTIG && td->td_samplesperpixel==2 ))
+        {
             JxlColorEncoding color_encoding = {};
             memset(&color_encoding,0,sizeof(color_encoding));
             JxlColorEncodingSetToSRGB(&color_encoding, TRUE);

@@ -721,7 +721,7 @@ static OGRPolygon *GML2FaceExtRing( const OGRGeometry *poGeom )
         {
             // There is a single Polygon within the collection.
             const OGRPolygon *poPg = poColl->getGeometryRef(0)->toPolygon();
-            poPolygon = poPg->clone()->toPolygon();
+            poPolygon = poPg->clone();
         }
         else
         {
@@ -734,7 +734,7 @@ static OGRPolygon *GML2FaceExtRing( const OGRGeometry *poGeom )
                         poColl->getGeometryRef(ig)->toPolygon();
                     if( poPg->getNumInteriorRings() > 0 )
                     {
-                        poPolygon = poPg->clone()->toPolygon();
+                        poPolygon = poPg->clone();
                     }
                 }
             }
@@ -1660,7 +1660,7 @@ OGRGeometry *GML2OGRGeometry_XMLNode_Internal(
         double alpha0 = 0.0;
         double alpha1 = 0.0;
         double alpha2 = 0.0;
-        if( !OGRGeometryFactory::GetCurveParmeters(
+        if( !OGRGeometryFactory::GetCurveParameters(
                                poLine->getX(0), poLine->getY(0),
                                poLine->getX(1), poLine->getY(1),
                                poLine->getX(2), poLine->getY(2),

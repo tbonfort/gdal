@@ -372,7 +372,7 @@ void OGRGeometry::dumpReadable( FILE * fp, const char * pszPrefix,
     {
         OGRErr err(OGRERR_NONE);
         OGRWktOptions opts;
-        
+
         opts.variant = wkbVariantIso;
         std::string wkt = exportToWkt(opts, &err);
         if( err == OGRERR_NONE )
@@ -1418,7 +1418,7 @@ OGRErr OGRGeometry::importFromWkb( const GByte* pabyData,
  * @return OGRERR_NONE if all goes well, otherwise any of
  * OGRERR_NOT_ENOUGH_DATA, OGRERR_UNSUPPORTED_GEOMETRY_TYPE, or
  * OGRERR_CORRUPT_DATA may be returned.
- * 
+ *
  * @since GDAL 2.3
  */
 
@@ -2149,7 +2149,13 @@ OGRGeometry::IsValid() const
 #else
         OGRBoolean bResult = FALSE;
 
-        GEOSContextHandle_t hGEOSCtxt = createGEOSContext();
+        // Some invalid geometries, such as lines with one point, or
+        // rings that do not close, cannot be converted to GEOS.
+        // For validity checking we initialize the GEOS context with
+        // the warning handler as the error handler to avoid emitting
+        // CE_Failure when a geometry cannot be converted to GEOS.
+        GEOSContextHandle_t hGEOSCtxt = initGEOS_r( OGRGEOSWarningHandler, OGRGEOSWarningHandler );
+
         GEOSGeom hThisGeosGeom = exportToGEOS(hGEOSCtxt);
 
         if( hThisGeosGeom != nullptr  )
@@ -3072,7 +3078,7 @@ GEOSGeom OGRGeometry::exportToGEOS(
     else if ( eType == wkbGeometryCollection )
     {
         bool bCanConvertToMultiPoly = true;
-        bool bMustConvertToMultiPoly = true;
+        // bool bMustConvertToMultiPoly = true;
         OGRGeometryCollection* poGC = poLinearGeom->toGeometryCollection();
         for( int iGeom = 0; iGeom < poGC->getNumGeometries(); iGeom++ )
         {
@@ -3080,7 +3086,7 @@ GEOSGeom OGRGeometry::exportToGEOS(
                 wkbFlatten(poGC->getGeometryRef(iGeom)->getGeometryType());
             if( eSubGeomType == wkbPolyhedralSurface || eSubGeomType == wkbTIN )
             {
-                bMustConvertToMultiPoly = true;
+                // bMustConvertToMultiPoly = true;
             }
             else if( eSubGeomType != wkbMultiPolygon &&
                      eSubGeomType != wkbPolygon )
@@ -3089,7 +3095,7 @@ GEOSGeom OGRGeometry::exportToGEOS(
                 break;
             }
         }
-        if( bCanConvertToMultiPoly && bMustConvertToMultiPoly )
+        if( bCanConvertToMultiPoly /* && bMustConvertToMultiPoly */ )
         {
             OGRGeometry *poMultiPolygon = OGRGeometryFactory::forceTo(
                                 poLinearGeom->clone(), wkbMultiPolygon, nullptr );
@@ -3733,12 +3739,12 @@ OGRGeometry *OGRGeometry::Normalize() const
              poOGRProduct = BuildGeometryFromGEOS(hGEOSCtxt, hGeosGeom,
                                                  this, nullptr);
 
-        } else 
+        } else
         {
             GEOSGeom_destroy_r( hGEOSCtxt, hGeosGeom );
         }
-        
-    } 
+
+    }
     freeGEOSContext( hGEOSCtxt );
 
     return poOGRProduct;
@@ -6015,8 +6021,13 @@ int OGRPreparedGeometryIntersects(
 {
 #ifdef HAVE_GEOS_PREPARED_GEOMETRY
     OGRGeometry* poOtherGeom = OGRGeometry::FromHandle(hOtherGeom);
-    if( hPreparedGeom == nullptr || poOtherGeom == nullptr )
+    if( hPreparedGeom == nullptr || poOtherGeom == nullptr
+        // The check for IsEmpty() is for buggy GEOS versions.
+        // See https://github.com/libgeos/geos/pull/423
+        || poOtherGeom->IsEmpty() )
+    {
         return FALSE;
+    }
 
     GEOSGeom hGEOSOtherGeom =
         poOtherGeom->exportToGEOS(hPreparedGeom->hGEOSCtxt);
@@ -6046,8 +6057,13 @@ int OGRPreparedGeometryContains(
 {
 #ifdef HAVE_GEOS_PREPARED_GEOMETRY
     OGRGeometry* poOtherGeom = OGRGeometry::FromHandle(hOtherGeom);
-    if( hPreparedGeom == nullptr || poOtherGeom == nullptr )
+    if( hPreparedGeom == nullptr || poOtherGeom == nullptr
+        // The check for IsEmpty() is for buggy GEOS versions.
+        // See https://github.com/libgeos/geos/pull/423
+        || poOtherGeom->IsEmpty() )
+    {
         return FALSE;
+    }
 
     GEOSGeom hGEOSOtherGeom =
         poOtherGeom->exportToGEOS(hPreparedGeom->hGEOSCtxt);

@@ -87,8 +87,8 @@ static const char* GetResampling(GDALDataset* poSrcDS)
 /************************************************************************/
 /*                             GetPredictor()                          */
 /************************************************************************/
-static const char* GetPredictor(GDALDataset* poSrcDS, 
-                                const char* pszPredictor) 
+static const char* GetPredictor(GDALDataset* poSrcDS,
+                                const char* pszPredictor)
 {
     if (pszPredictor == nullptr) return nullptr;
 
@@ -808,7 +808,7 @@ GDALDataset* GDALCOGCreator::Create(const char * pszFilename,
         papszOptions, "OVERVIEWS", "AUTO");
     const bool bRecreateOvr = EQUAL(osOverviews, "FORCE_USE_EXISTING") ||
                               EQUAL(osOverviews, "NONE");
-    const bool bGenerateMskOvr = 
+    const bool bGenerateMskOvr =
         !bRecreateOvr &&
         bHasMask &&
         (nXSize > nOvrThresholdSize || nYSize > nOvrThresholdSize) &&
@@ -955,11 +955,11 @@ GDALDataset* GDALCOGCreator::Create(const char * pszFilename,
     aosOptions.SetNameValue("BLOCKYSIZE", osBlockSize);
     const char* pszPredictor = CSLFetchNameValueDef(papszOptions, "PREDICTOR", "FALSE");
     const char* pszPredictorValue = GetPredictor(poSrcDS, pszPredictor);
-    if (pszPredictorValue != nullptr) 
-    { 
+    if (pszPredictorValue != nullptr)
+    {
         aosOptions.SetNameValue("PREDICTOR", pszPredictorValue);
     }
-    
+
     const char* pszQuality = CSLFetchNameValue(papszOptions, "QUALITY");
     if( EQUAL(osCompress, "JPEG") )
     {
@@ -1047,7 +1047,7 @@ GDALDataset* GDALCOGCreator::Create(const char * pszFilename,
     CPLConfigOptionSetter ovrQualityWebpSetter("WEBP_LEVEL_OVERVIEW", CSLFetchNameValue(papszOptions, "OVERVIEW_QUALITY"), true);
 
     std::unique_ptr<CPLConfigOptionSetter> poPhotometricSetter;
-    if (pszOverviewCompress != nullptr && nBands == 3 && EQUAL(pszOverviewCompress, "JPEG") ) 
+    if (pszOverviewCompress != nullptr && nBands == 3 && EQUAL(pszOverviewCompress, "JPEG") )
     {
         poPhotometricSetter.reset(new CPLConfigOptionSetter("PHOTOMETRIC_OVERVIEW", "YCBCR", true));
     }
@@ -1109,6 +1109,7 @@ class GDALCOGDriver final: public GDALDriver
         bool bHasZSTD = false;
         bool bHasJPEG = false;
         bool bHasWebP = false;
+        bool bHasLERC = false;
         std::string osCompressValues{};
 
         void InitializeCreationOptionList();
@@ -1139,7 +1140,7 @@ GDALCOGDriver::GDALCOGDriver()
     // TIFFGetConfiguredCODECs(), this wouldn't work properly if the LERC codec
     // had been registered in between
     osCompressValues = GTiffGetCompressValues(
-        bHasLZW, bHasDEFLATE, bHasLZMA, bHasZSTD, bHasJPEG, bHasWebP,
+        bHasLZW, bHasDEFLATE, bHasLZMA, bHasZSTD, bHasJPEG, bHasWebP, bHasLERC,
         true /* bForCOG */);
 }
 
@@ -1183,10 +1184,11 @@ void GDALCOGDriver::InitializeCreationOptionList()
                      "   <Option name='OVERVIEW_QUALITY' type='int' "
                      "description='Overview JPEG/WEBP quality 1-100' default='75'/>";
     }
-#ifdef HAVE_LERC
-    osOptions += ""
+    if( bHasLERC )
+    {
+        osOptions += ""
 "   <Option name='MAX_Z_ERROR' type='float' description='Maximum error for LERC compression' default='0'/>";
-#endif
+    }
 #ifdef HAVE_JXL
     osOptions += ""
 "   <Option name='JXL_LOSSLESS' type='boolean' description='Whether JPEGXL compression should be lossless' default='YES'/>"
