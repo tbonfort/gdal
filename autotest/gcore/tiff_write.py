@@ -153,7 +153,7 @@ def test_tiff_write_4():
 
     assert gt == new_ds.GetGeoTransform(), 'Wrong geotransform.'
 
-    new_ds.SetMetadata({'TEST_KEY': 'TestValue'})
+    new_ds.SetMetadata({'TEST_KEY': 'TestValue <>'})
 
     new_ds = None
 
@@ -168,7 +168,7 @@ def test_tiff_write_4():
     assert nd is None, 'Got unexpected nodata value.'
 
     md_dict = new_ds.GetMetadata()
-    assert md_dict['TEST_KEY'] == 'TestValue', 'Missing metadata'
+    assert md_dict['TEST_KEY'] == 'TestValue <>', 'Missing metadata'
 
     new_ds = None
 
@@ -229,6 +229,11 @@ def test_tiff_write_6():
         gdaltest.tiff_write_6_failed = True
         pytest.fail('did not get back expected data.')
 
+    ds = None
+
+    ds = gdal.Open('tmp/test_6.tif')
+    assert ds.GetMetadataItem('COMPRESSION', 'IMAGE_STRUCTURE') == 'DEFLATE'
+    assert ds.GetMetadataItem('PREDICTOR', 'IMAGE_STRUCTURE') == '2'
     ds = None
 
     gdaltest.tiff_write_6_failed = False
@@ -7485,6 +7490,22 @@ def test_tiff_write_jpegxl_uint16_single_band():
 
     ut = gdaltest.GDALTest('GTiff', 'uint16.tif', 1, 4672, options=['COMPRESS=JXL'])
     return ut.testCreateCopy()
+
+###############################################################################
+# Test creating overviews with NaN nodata
+
+
+def test_tiff_write_overviews_nan_nodata():
+
+    filename = '/vsimem/test_tiff_write_overviews_nan_nodata.tif'
+    ds = gdal.GetDriverByName('GTiff').Create(filename, 32, 32, 1, gdal.GDT_Float32, options=['TILED=YES', 'SPARSE_OK=YES'])
+    ds.GetRasterBand(1).SetNoDataValue(float('nan'))
+    ds.BuildOverviews('NONE', [2, 4])
+    ds = None
+    ds = gdal.Open(filename)
+    assert ds.GetRasterBand(1).GetOverviewCount() == 2
+    ds = None
+    gdal.Unlink(filename)
 
 
 def test_tiff_write_cleanup():

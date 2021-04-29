@@ -119,6 +119,7 @@
 %constant GRA_Med              = GRA_Med;
 %constant GRA_Q1               = GRA_Q1;
 %constant GRA_Q3               = GRA_Q3;
+%constant GRA_Sum              = GRA_Sum;
 
 // GDALPaletteInterp
 %constant GPI_Gray  = GPI_Gray;
@@ -235,6 +236,7 @@
 
 %constant CPLES_BackslashQuotable = CPLES_BackslashQuotable;
 %constant CPLES_XML               = CPLES_XML;
+%constant CPLES_XML_BUT_QUOTES    = CPLES_XML_BUT_QUOTES;
 %constant CPLES_URL               = CPLES_URL;
 %constant CPLES_SQL               = CPLES_SQL;
 %constant CPLES_CSV               = CPLES_CSV;

@@ -95,7 +95,7 @@ class OGRProjCT;
 // find a value in it.
 // In a future improvement (notably to help for the multi-threaded warping),
 // we could let the cached value in the cache and clone it, but for now clone,
-// just instanciates a new OGRProjCT from scrach. The clone method should be
+// just instantiates a new OGRProjCT from scratch. The clone method should be
 // improved to do things similar to GetInverse().
 typedef std::string CTCacheKey;
 typedef std::shared_ptr<std::unique_ptr<OGRProjCT>> CTCacheValue;
@@ -2228,7 +2228,7 @@ int OGRProjCT::TransformWithErrorCodes(
             coord.xyzt.x = x[i];
             coord.xyzt.y = y[i];
             coord.xyzt.z = z ? z[i] : 0;
-            coord.xyzt.t = t ? t[i] : 0;
+            coord.xyzt.t = t ? t[i] : HUGE_VAL;
             proj_errno_reset(pj);
             coord = proj_trans(pj, m_bReversePj ? PJ_INV : PJ_FWD, coord);
             x[i] = coord.xyzt.x;

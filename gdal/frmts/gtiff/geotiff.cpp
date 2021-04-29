@@ -162,6 +162,17 @@ const char szPROFILE_GeoTIFF[] = "GeoTIFF";
 const char szPROFILE_GDALGeoTIFF[] = "GDALGeoTIFF";
 
 /************************************************************************/
+/*                         GTIFFSupportsPredictor()                     */
+/************************************************************************/
+
+bool GTIFFSupportsPredictor(int nCompression)
+{
+    return nCompression == COMPRESSION_LZW ||
+           nCompression == COMPRESSION_ADOBE_DEFLATE ||
+           nCompression == COMPRESSION_ZSTD;
+}
+
+/************************************************************************/
 /*                          GTIFFSetInExternalOvr()                     */
 /************************************************************************/
 
@@ -5849,7 +5860,9 @@ CPLErr GTiffRasterBand::SetNoDataValue( double dfNoData )
 {
     m_poGDS->LoadGeoreferencingAndPamIfNeeded();
 
-    if( m_poGDS->m_bNoDataSet && m_poGDS->m_dfNoDataValue == dfNoData )
+    if( m_poGDS->m_bNoDataSet &&
+        (m_poGDS->m_dfNoDataValue == dfNoData ||
+         (std::isnan(m_poGDS->m_dfNoDataValue) && std::isnan(dfNoData))) )
     {
         m_bNoDataSet = true;
         m_dfNoDataValue = dfNoData;
@@ -5962,6 +5975,9 @@ void GTiffRasterBand::NullBlock( void *pData )
 int GTiffRasterBand::GetOverviewCount()
 
 {
+    if( !m_poGDS->AreOverviewsEnabled() )
+        return 0;
+
     m_poGDS->ScanDirectories();
 
     if( m_poGDS->m_nOverviewCount > 0 )
@@ -9283,9 +9299,7 @@ bool GTiffDataset::SubmitCompressionJob( int nStripOrTile, GByte* pabyData,
             sJob.nHeight = nHeight;
             sJob.nStripOrTile = nStripOrTile;
             sJob.nPredictor = PREDICTOR_NONE;
-            if( m_nCompression == COMPRESSION_LZW ||
-                m_nCompression == COMPRESSION_ADOBE_DEFLATE ||
-                m_nCompression == COMPRESSION_ZSTD )
+            if( GTIFFSupportsPredictor(m_nCompression) )
             {
                 TIFFGetField( m_hTIFF, TIFFTAG_PREDICTOR, &sJob.nPredictor );
             }
@@ -9344,9 +9358,7 @@ bool GTiffDataset::SubmitCompressionJob( int nStripOrTile, GByte* pabyData,
     psJob->nHeight = nHeight;
     psJob->nStripOrTile = nStripOrTile;
     psJob->nPredictor = PREDICTOR_NONE;
-    if( m_nCompression == COMPRESSION_LZW ||
-        m_nCompression == COMPRESSION_ADOBE_DEFLATE ||
-        m_nCompression == COMPRESSION_ZSTD )
+    if( GTIFFSupportsPredictor(m_nCompression) )
     {
         TIFFGetField( m_hTIFF, TIFFTAG_PREDICTOR, &psJob->nPredictor );
     }
@@ -10291,9 +10303,7 @@ CPLErr GTiffDataset::CreateOverviewsFromSrcOverviews(GDALDataset* poSrcDS,
 /*      Fetch predictor tag                                             */
 /* -------------------------------------------------------------------- */
     uint16_t nPredictor = PREDICTOR_NONE;
-    if( l_nCompression == COMPRESSION_LZW ||
-        l_nCompression == COMPRESSION_ADOBE_DEFLATE ||
-        l_nCompression == COMPRESSION_ZSTD )
+    if( GTIFFSupportsPredictor(l_nCompression) )
     {
         if ( CPLGetConfigOption( "PREDICTOR_OVERVIEW", nullptr ) != nullptr )
         {
@@ -10652,9 +10662,7 @@ CPLErr GTiffDataset::IBuildOverviews(
 /*      Fetch predictor tag                                             */
 /* -------------------------------------------------------------------- */
     uint16_t nPredictor = PREDICTOR_NONE;
-    if( m_nCompression == COMPRESSION_LZW ||
-        m_nCompression == COMPRESSION_ADOBE_DEFLATE ||
-        m_nCompression == COMPRESSION_ZSTD )
+    if( GTIFFSupportsPredictor(m_nCompression) )
         TIFFGetField( m_hTIFF, TIFFTAG_PREDICTOR, &nPredictor );
 
 /* -------------------------------------------------------------------- */
@@ -11288,6 +11296,9 @@ static void AppendMetadataItem( CPLXMLNode **ppsRoot, CPLXMLNode **ppsTail,
         CPLCreateXMLNode( CPLCreateXMLNode( psItem,CXT_Attribute,"domain"),
                           CXT_Text, pszDomain );
 
+    // Note: this escaping should not normally be done, as the serialization
+    // of the tree to XML also does it, so we end up width double XML escaping,
+    // but keep it for backward compatibility.
     char *pszEscapedItemValue = CPLEscapeString(pszValue,-1,CPLES_XML);
     CPLCreateXMLNode( psItem, CXT_Text, pszEscapedItemValue );
     CPLFree( pszEscapedItemValue );
@@ -14576,6 +14587,9 @@ CPLErr GTiffDataset::OpenOffset( TIFF *hTIFFIn,
             if( STARTS_WITH_CI(pszDomain, "xml:") )
                 bIsXML = TRUE;
 
+            // Note: this un-escaping should not normally be done, as the deserialization
+            // of the tree from XML also does it, so we end up width double XML escaping,
+            // but keep it for backward compatibility.
             char *pszUnescapedValue =
                 CPLUnescapeString( pszValue, nullptr, CPLES_XML );
             if( nBand == 0 )
@@ -14696,6 +14710,18 @@ CPLErr GTiffDataset::OpenOffset( TIFF *hTIFFIn,
         {
             SetJPEGQualityAndTablesModeFromFile(nQuality, bHasQuantizationTable,
                                                 bHasHuffmanTable);
+        }
+    }
+
+    if( GTIFFSupportsPredictor(m_nCompression) )
+    {
+        uint16_t nPredictor = 0;
+        if( TIFFGetField( m_hTIFF, TIFFTAG_PREDICTOR, &nPredictor ) &&
+            nPredictor > 1 )
+        {
+            m_oGTiffMDMD.SetMetadataItem( "PREDICTOR",
+                                          CPLSPrintf("%d", nPredictor),
+                                          "IMAGE_STRUCTURE" );
         }
     }
 
@@ -16326,9 +16352,7 @@ TIFF *GTiffDataset::CreateLL( const char * pszFilename,
 /* -------------------------------------------------------------------- */
 /*      Set compression related tags.                                   */
 /* -------------------------------------------------------------------- */
-    if( l_nCompression == COMPRESSION_LZW ||
-         l_nCompression == COMPRESSION_ADOBE_DEFLATE ||
-         l_nCompression == COMPRESSION_ZSTD )
+    if( GTIFFSupportsPredictor(l_nCompression) )
         TIFFSetField( l_hTIFF, TIFFTAG_PREDICTOR, nPredictor );
     if( l_nCompression == COMPRESSION_ADOBE_DEFLATE ||
         l_nCompression == COMPRESSION_LERC )
@@ -18874,15 +18898,13 @@ GTiffDataset::CreateCopy( const char * pszFilename, GDALDataset *poSrcDS,
 const OGRSpatialReference* GTiffDataset::GetSpatialRef() const
 
 {
+    const_cast<GTiffDataset*>(this)->LoadGeoreferencingAndPamIfNeeded();
     if( m_nGCPCount == 0 )
     {
-        const_cast<GTiffDataset*>(this)->LoadGeoreferencingAndPamIfNeeded();
         const_cast<GTiffDataset*>(this)->LookForProjection();
-
-        return m_oSRS.IsEmpty() ? nullptr : &m_oSRS;
     }
 
-    return nullptr;
+    return m_nGCPCount == 0 && !m_oSRS.IsEmpty() ? &m_oSRS : nullptr;
 }
 
 /************************************************************************/
@@ -19039,10 +19061,7 @@ const OGRSpatialReference *GTiffDataset::GetGCPSpatialRef() const
     {
         const_cast<GTiffDataset*>(this)->LookForProjection();
     }
-    if( !m_oSRS.IsEmpty() )
-        return &m_oSRS;
-
-    return nullptr;
+    return m_nGCPCount > 0 && !m_oSRS.IsEmpty() ? &m_oSRS : nullptr;
 }
 
 /************************************************************************/
